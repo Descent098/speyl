@@ -15,15 +15,24 @@ To your go file, then run `go mod tidy` to download. Here's a minimal example:
 ```go
 package main
 
-import "github.com/Descent098/speyl"
+import (
+	"fmt"
 
-func main(){
-	inputWord := "alumni"
+	"github.com/Descent098/speyl"
+)
+
+func main() {
 	validWords := []string{"hi", "hello", "bonjour", "alumni"}
-	SuggestWord(inputWord, validWords) // Returns algorithms.Suggestion{Likelihood: 1.0, Word: "alumni"}
+
+	inputWord := "alumni"
+	s := speyl.SuggestWord(inputWord, validWords) // Returns algorithms.Suggestion{Likelihood: 1.0, Word: "alumni"}
+	// Prints: alumni is alumni with %100.00 Likelihood
+	fmt.Printf("%s is %s with %%%.2f Likelihood\n", inputWord, s.Word, s.Likelihood*100)
 
 	misspeltWord := "almni"
-	SuggestWord(misspeltWord, validWords) // Returns algorithms.Suggestion{Likelihood: 0.944, Word: "alumni"}
+	s = speyl.SuggestWord(misspeltWord, validWords) // Returns algorithms.Suggestion{Likelihood: 0.944, Word: "alumni"}
+	// Prints: almni is alumni with %94.44 Likelihood
+	fmt.Printf("%s is %s with %%%.2f Likelihood\n", misspeltWord, s.Word, s.Likelihood*100)
 }
 ```
 
