@@ -32,7 +32,6 @@ func TestSuggestWord(t *testing.T) {
 			[]string{"hi", "hello", "bonjour", "alumni"},
 			algorithms.Suggestion{Likelihood: 0.944, Word: "alumni"},
 		},
-		//TODO: add more cases
 	}
 
 	for _, currentCase := range cases {
@@ -50,5 +49,38 @@ func TestSuggestWord(t *testing.T) {
 			t.Errorf("SuggestWord(%s) got incorrect value expected:%.3f \n\tGot %.3f", currentCase.word, currentCase.expectedResult.Likelihood, asynchronusResult.Likelihood)
 		}
 
+	}
+}
+
+func BenchmarkSuggestWord(b *testing.B) {
+	type testCase struct {
+		word           string
+		validWords     []string
+		expectedResult algorithms.Suggestion
+	}
+	validWords := LoadPremadeWords()
+
+	cases := []testCase{
+		{
+			"alumni",
+			validWords,
+			algorithms.Suggestion{Likelihood: 1.0, Word: "alumni"},
+		},
+		{
+			"almni",
+			validWords,
+			algorithms.Suggestion{Likelihood: 0.944, Word: "alumni"},
+		},
+	}
+	for n := 0; n < b.N; n++ {
+		for _, currentCase := range cases {
+			res := SuggestWord(currentCase.word, currentCase.validWords)
+			if res.Word != currentCase.expectedResult.Word {
+				b.Errorf("SuggestWord(%s) Wrong word: expected %s got %s", currentCase.word, currentCase.expectedResult.Word, res.Word)
+			}
+			if !compareFloat(float64(res.Likelihood), float64(currentCase.expectedResult.Likelihood), 3) {
+				b.Errorf("SuggestWord(%s) got incorrect value expected:%.3f \n\tGot %.3f", currentCase.word, currentCase.expectedResult.Likelihood, res.Likelihood)
+			}
+		}
 	}
 }

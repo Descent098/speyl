@@ -8,64 +8,82 @@ package speyl
 
 import (
 	_ "embed"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
-	"sync"
 
 	"github.com/Descent098/speyl/algorithms"
 )
 
-//go:embed words.txt
-var wordsContent string
+// Gets the file path of the currently running go file
+//
+// # Returns
+//
+//	string: the path to the current file in go
+func getCurrentFilePath() string {
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		panic("Could not get caller information")
+	}
+	return filename
+}
 
 // Helper function to load a default corpus of over 350,000 words
 //
 // # Returns
 //
 //	[]string: A slice with the words in the corpus
-func LoadWords() []string {
-	result := strings.Split(wordsContent, "\r\n")
+func LoadPremadeWords() []string {
+	currentFileDir := filepath.Dir(getCurrentFilePath())
+	filePath := filepath.Join(currentFileDir, "words.txt")
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	result := strings.Split(string(content), "\r\n")
 	return result
 }
 
-// Utility function that does the heavy lifting, essentially a general solution that will take in any SimilarityAlgorithm
+// Used to get a suggested word with a specific algorithm
 //
 // # Parameters
 //
-//	inputWord (*C.char): The word to find a similar word for
-//	algorithm (algorithms.SimilarityAlgorithm): The algorithm to use to calculate the similarity of the words
+//	inputWord (string): The word to find a similar word for
 //	validWords ([]string): A slice with the words in the corpus
+//	algorithm (algorithms.SimilarityAlgorithm): The algorithm to use to calculate the similarity of the words
 //
 // # Returns
 //
-//	Suggestion: A pointer to the suggestion struct with the word and it's likelihood
-func CheckSimilarity(word string, algorithm algorithms.SimilarityAlgorithm, validWords []string) algorithms.Suggestion {
+//	algorithms.Suggestion: A pointer to the suggestion struct with the word and it's likelihood
+func SuggestWordWithSpecificAlgorithm(word string, validWords []string, algorithm algorithms.SimilarityAlgorithm) algorithms.Suggestion {
 	result := algorithms.SuggestWord(word, validWords, algorithm)
 	return result
 }
 
+// Used to get a suggestion using Jaro Similarity, fastest solution available
+//
+// # Parameters
+//
+//	inputWord (string): The word to find a similar word for
+//	validWords ([]string): A slice with the words that are considered valid
+//
+// # Returns
+//
+//	Suggestion: A suggestion struct with the word and it's likelihood
 func SuggestWord(word string, validWords []string) algorithms.Suggestion {
-	writeResultLock := sync.Mutex{}
-
 	highestRatio := float32(0)
 	currentSuggestion := ""
 
-	wg := sync.WaitGroup{}
-
 	for _, currentWord := range validWords {
-		wg.Add(1)
-		go func(wordToCompare string) {
-			defer wg.Done()
-			defer writeResultLock.Unlock()
-			res := algorithms.JaroSimilarity(word, wordToCompare)
-			writeResultLock.Lock()
-			if res > highestRatio {
-				highestRatio = res
-				currentSuggestion = currentWord
-			}
-		}(currentWord)
-
+		res := algorithms.JaroSimilarity(word, currentWord)
+		if res > highestRatio {
+			highestRatio = res
+			currentSuggestion = currentWord
+		}
 	}
-	wg.Wait()
 	return algorithms.Suggestion{
 		Likelihood: highestRatio,
 		Word:       currentSuggestion,

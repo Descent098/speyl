@@ -2,6 +2,56 @@
 
 A Golang Based spell checker
 
+## Installation
+
+Add:
+
+```go
+import "github.com/Descent098/speyl"
+```
+ 
+To your go file, then run `go mod tidy` to download. Here's a minimal example:
+
+```go
+package main
+
+import "github.com/Descent098/speyl"
+
+func main(){
+	inputWord := "alumni"
+	validWords := []string{"hi", "hello", "bonjour", "alumni"}
+	SuggestWord(inputWord, validWords) // Returns algorithms.Suggestion{Likelihood: 1.0, Word: "alumni"}
+
+	misspeltWord := "almni"
+	SuggestWord(misspeltWord, validWords) // Returns algorithms.Suggestion{Likelihood: 0.944, Word: "alumni"}
+}
+```
+
+
+## Usage
+
+The generally recommended usage is to use the `SuggestWord()` function in the main package, this uses the [Jaro Similarity](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance), and is the fastest algorithm by far:
+
+```go 
+func SuggestWord(word string, validWords []string) algorithms.Suggestion{}
+```
+
+Which returns a struct:
+
+```go
+type Suggestion struct {
+	Likelihood float32 // How confident the suggestion is
+	Word       string  // The suggested word
+}
+```
+
+If you want to use a different algorithm you can do so with:
+
+```go
+func SuggestWordWithSpecificAlgorithm(word string, validWords []string, algorithm algorithms.SimilarityAlgorithm) algorithms.Suggestion {}
+```
+
+You can find the various available `SimilarityAlgorithm`'s in the `algorithm` package.
 
 ## Performance
 
@@ -11,11 +61,11 @@ Below is the performance tests of the various algorithms and their implementatio
 |-----------|--------------------------|
 | Jaro | 27 |
 | Levenshtein (Dynamic Programming) | 105 |
-| Levenshtein (Recursive) | 18078 |
-| Indel | 1975 |
-| Levenshtein (Recursive Damerau) | 2997 | 
+| Indel | 1,975 |
+| Levenshtein (Recursive Damerau) | 2,997 | 
+| Levenshtein (Recursive) | 18,078 |
 
-The second was using the concurrent model:
+You may assume that `SuggestWord()` is concurrent, but actually because of the execution speed of the Jaro and Dynamic Programming Levenshtein, it was slower to do the task asynchronously than synchronously. Since these would be the two that are most likely to get practical use I left the main implementations synchronous. If your list of valid words is over ~1 mil it might be worth implementing the concurrent version yourself. Here the code I tried (I also tried with channels and it was still slower):
 
 ```go
 func SuggestWord(word string, validWords []string, algorithm algorithms.SimilarityAlgorithm) algorithms.Suggestion {

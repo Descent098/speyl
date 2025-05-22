@@ -1,8 +1,8 @@
 package algorithms
 
 type Suggestion struct {
-	Likelihood float32
-	Word       string
+	Likelihood float32 // How confident the suggestion is
+	Word       string  // The suggested word
 }
 
 type DistanceAlgorithm func(inputString, targetString string) int
